@@ -1,81 +1,99 @@
 class Entrada{
-    var banda
-    var fecha
-    method banda() = banda
-    method fecha() = fecha
+    var property banda
+    var property fecha
 
     const precioBase = 1000
-    method PrecioFinal(productora) {
-        //precioBase = PrecioBase + precioBase* productora.extraPrecio()
-    }
+
+    method PrecioFinal(productora) = precioBase + productora.impuesto()
 }
 class Asistente{
-    const tipoDeAbono
-    var historialDeEntradas = {}
-    var dineroDisponible
+    const property tipoDeAbono
+    var property historialDeEntradas = []
+    var property dineroDisponible
 
-// Me falta si no le alcanza el dineroDisponible y lo que ve el asistente de sus entradas pasadas
-    method comprarEntrada(entrada) {
-        if(dineroDisponible >= entrada.PrecioFinal(productora)){
-            historialDeEntradas = historialDeEntradas + entrada
-            dineroDisponible = dineroDisponible - entrada.PrecioFinal(productora)
+    method comprarEntrada(banda, fecha, productora) {
+        if(dineroDisponible <= 0){
+            self.error("Saldo Insuficiente")
         }
-
+        const entrada = new Entrada (banda = banda, fecha = fecha)
+        const montoAPagar = tipoDeAbono.montoAPagar(entrada,productora)
+        dineroDisponible -= montoAPagar
+        historialDeEntradas.add(entrada)
     }
-// Al instanciarlo se ve el tipoDeAbono
+    method entradasAnioAnterior(anioActual){
+        const anioAnterior = anioActual - 1
+        return historialDeEntradas.filter({e => e.fecha() == anioAnterior})
+    }
+}
+class Abono{
+    method montoAPagar(entrada, productora)
+    method bonificar() {}
+}
 
+class Fan inherits Abono{
+    override method montoAPagar(entrada, productora) = entrada.PrecioFinal(productora)
+}
+class Vip inherits Abono{
+    var property porcentajeDescuento 
+    override method montoAPagar(entrada, productora) = entrada.PrecioFinal(productora) - entrada.PrecioFinal(productora) * porcentajeDescuento
+    override method bonificar(){
+        porcentajeDescuento += 0.01
+    }
 }
 
 class Banda{
-    var nombre
-    method nombre() = nombre
-    var popularidad
-    var canon = 1000000
-    method cambiarPopularidad(cantidad) {
-      popularidad = cantidad
-    }
-}
-// No se si tendria que hacer las Bandas con composicion
-class Rockera inherits Banda{
-    var solosDeGuitarra
-    const gastosExtra = 10000
-    method darPopularidad() = 100 * solosDeGuitarra
-    var presupuesto = canon + gastosExtra
-}
-class Trapera inherits Banda{
-    const gastosExtra = 0
-    var presupuesto = canon
-    var hielo
-method darPopularidad()
-{    if (hielo){
-        popularidad = 1000
-    }else
-    popularidad = 0
-}
-method cambiarCanon() {
-      canon = popularidad * popularidad
-    }
+    var property nombre
+    var property estilo
+
+    method popularidad() = estilo.popularidad(self)
+    method canonBase() = 1000000
+    method presupuesto() = estilo.presupuesto(self)
+    method gastoExtra() = estilo.gastoExtra(self) 
 }
 
-class Indie inherits Banda{
-    var cantidadDeInstrumentos
-    method gastoExtra() = 500 * cantidadDeInstrumentos
+class Rockera {
+    var property solosDeGuitarra
+    method gastoExtra(banda) = 10000
+    method popularidad(banda) = 100 * solosDeGuitarra
+    method presupuesto(banda) = banda.canonBase() + self.gastoExtra(banda)
+}
+class Trapera{
+    var property hielo
+    method popularidad(banda) = if (hielo) 1000 else 0
+    method presupuesto(banda) = self.popularidad(banda) * 1000000
+    method gastoExtra(banda) = 0
+}
+
+class Indie{
+    var property cantidadDeInstrumentos
+    method popularidad(banda) = 3.14 * banda.nombre().length()
+    method presupuesto(banda) = banda.canonBase() + self.gastoExtra(banda)
+    method gastoExtra(banda) = 500 * cantidadDeInstrumentos
 }
 
 object productora{
-    const listaDeAsistentes = {}
+    const property asistentes = []
+    const property bandas = []
+
     method agregarAsistentes(unAsistente){
-        listaDeAsistentes.add(unAsistente)
-    } //Chequear funcionamiento
-    const coleccionDeEntradas = {}
-    method entradasTotales() {
-      coleccionDeEntradas.add(listaDeAsistentes.forEach(historialDeEntradas.PrecioFinal(productora)))
-    } //Chequear el foreach
-    method gananciaTotal() = coleccionDeEntradas.sum() //Falta entrar en la parte del valor de la entrada
+        asistentes.add(unAsistente)
+    }
+    method agregarBandas(unaBanda){
+        bandas.add(unaBanda)
+    }
+    method todasLasEntradas() = asistentes.flatMap({a => a.historialDeEntradas()})
+    method entradasVendidas() = self.todasLasEntradas().size()
+    method calcularGananciaTotal(){
+        const recaudacion = self.todasLasEntradas().sum({e => e.PrecioFinal(self)})
+        const presupuestoTotal = bandas.sum({b => b.presupuesto()})
+        return recaudacion - presupuestoTotal
+        }
 
-    method entradasVendidas() = coleccionDeEntradas.length()
+    method entradasDeBanda(banda) = self.todasLasEntradas().count({e => e.banda() == banda})
 
-//    method bandaMasPopular() =
+    method bandaMasPopular() = bandas.max({b => self.entradasDeBanda(b)})
+    method bonificarVips() {
+        asistentes.forEach({a => a.tipoDeAbono().bonificar()})
+    }
 
-//    method bonificarVips() =
 }
